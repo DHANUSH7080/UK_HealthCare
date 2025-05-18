@@ -123,7 +123,7 @@ if page == "Home - Trends":
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
     with col3:  
         col3_data = filtered_df['Average (median) waiting time (in weeks)'].ffill()
-        avg_change = col3_data.pct_change(fill_method=None).mean() * 100
+        avg_change = col3_data.pct_change(fill_method=None,limit=None).mean() * 100
         create_metric_card(f"Monthly Change {trust_suffix}", f"{avg_change:.1f}%", f"{avg_change:.1f}% from last month")
 
     st.subheader(f"📆 Monthly Waiting Time Trends {trust_suffix}")
