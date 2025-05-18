@@ -170,7 +170,7 @@ elif page == "Anomaly Detection":
             st.markdown(f"""
             <div style="background-color: red; padding: 1rem; border-radius: 12px; margin: 0.5rem 0;">
               <h4 style="color: white;">⚠️ Anomaly Detected: {month.strftime('%B %Y')}</h4>
-              <p style="color: white;">Waiting Time: {row['Average Wait']} mins</p>
+              <p style="color: white;">Waiting Time: {row['Average_Wait']} mins</p>
             </div>
             """, unsafe_allow_html=True)
     else:
