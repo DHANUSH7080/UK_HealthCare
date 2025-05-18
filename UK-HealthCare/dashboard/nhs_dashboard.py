@@ -117,8 +117,11 @@ if page == "Home - Trends":
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        current_wait = filtered_df['Average (median) waiting time (in weeks)'].iloc[-1]
-        create_metric_card(f"Current Median Wait {trust_suffix}", f"{current_wait:.1f} weeks")
+        if not filtered_df.empty and 'Average (median) waiting time (in' in filtered_df.columns:
+           current_wait = filtered_df['Average (median) waiting time (in weeks)'].iloc[0]
+           create_metric_card(f"Current Median Wait {trust_suffix}", f"{current_wait:.1f} weeks")
+        else:
+           create_metric_card(f"Current Median Wait {trust_suffix}", "No data")
     with col2:
         incomplete_pathways = filtered_df['Total number of incomplete pathways'].sum()
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
