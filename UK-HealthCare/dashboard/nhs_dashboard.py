@@ -254,14 +254,14 @@ elif page == "Chat with NHS AI":
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
-    if not df.empty and pd.to_datetime(df['Month'], errors='coerce').notna().any():
-      latest_month = pd.to_datetime(df['Month'], errors='coerce').max()
-      latest_month_str = latest_month.strftime('%B %Y')
-    else:
-      latest_month_str = "No valid dates"
+   month_col = pd.to_datetime(df['Month'], errors='coerce')  # convert all at once
 
-    # ✅ Summarize dataset context (use key stats only)
-    latest_month = pd.to_datetime(df['Month'].max()).strftime('%B %Y')
+if month_col.notna().any():
+    latest_month = month_col.max()
+    latest_month_str = latest_month.strftime('%B %Y')
+else:
+    latest_month_str = "No valid dates"
+
     summary_text = f"""
 You are an NHS data assistant. You must answer based on the current dataset of monthly waiting times (April 2024 to March 2025).
 
