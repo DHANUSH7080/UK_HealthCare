@@ -74,7 +74,7 @@ def load_data():
 
 df = load_data()
 df['Month'] = pd.to_datetime(df['Month'], errors='coerce')
-
+df=df.asfreq('ME')
 # Navigation
 with st.sidebar:
     page = option_menu(
