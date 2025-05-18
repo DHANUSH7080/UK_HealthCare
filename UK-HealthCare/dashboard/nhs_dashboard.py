@@ -253,7 +253,7 @@ elif page == "Chat with NHS AI":
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
     # ✅ Summarize dataset context (use key stats only)
-    latest_month = df['Month'].max().strftime('%B %Y')
+    latest_month = pd.to_datetime(df['Month'].max()).strftime('%B %Y')
     summary_text = f"""
 You are an NHS data assistant. You must answer based on the current dataset of monthly waiting times (April 2024 to March 2025).
 
