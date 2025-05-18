@@ -124,15 +124,15 @@ if page == "Home - Trends":
         incomplete_pathways = filtered_df['Total number of incomplete pathways'].sum()
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
    with col3:  
-    col3_data = filtered_df['Average (median) waiting time (in weeks)'].ffill()
+        col3_data = filtered_df['Average (median) waiting time (in weeks)'].ffill()
     # Add .dropna() and handle empty series
-    if len(col3_data) > 1:
-        avg_change = (col3_data / col3_data.shift(1) - 1).mean() * 100
-        delta_text = f"{avg_change:.1f}% from last month"
-    else:
-        avg_change = 0
-        delta_text = "Insufficient data"
-    create_metric_card(f"Monthly Change {trust_suffix}", f"{avg_change:.1f}%", delta_text)
+        if len(col3_data) > 1:
+            avg_change = (col3_data / col3_data.shift(1) - 1).mean() * 100
+            delta_text = f"{avg_change:.1f}% from last month"
+        else:
+            avg_change = 0
+            delta_text = "Insufficient data"
+        create_metric_card(f"Monthly Change {trust_suffix}", f"{avg_change:.1f}%", delta_text)
     st.subheader(f"📆 Monthly Waiting Time Trends {trust_suffix}")
     trust_avg = filtered_df.groupby("Month")["Average (median) waiting time (in weeks)"].mean().reset_index()
     fig = px.line(trust_avg, x="Month", y="Average (median) waiting time (in weeks)", 
