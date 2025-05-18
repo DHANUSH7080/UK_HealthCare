@@ -125,7 +125,7 @@ if page == "Home - Trends":
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
     with col3:  
         col3_data = filtered_df['Average (median) waiting time (in weeks)'].ffill()
-        avg_change = col3_data.pct_change(fill_method=None,limit=None).mean() * 100
+        avg_change = (col3_data / col3_data.shift(1) - 1).mean() * 100  # Manual pct change
         create_metric_card(f"Monthly Change {trust_suffix}", f"{avg_change:.1f}%", f"{avg_change:.1f}% from last month")
 
     st.subheader(f"📆 Monthly Waiting Time Trends {trust_suffix}")
@@ -205,6 +205,7 @@ elif page == "Forecasting":
 
     prophet_df = forecast_df.rename(columns={'Month': 'ds', 'Average (median) waiting time (in weeks)': 'y'})[['ds', 'y']].dropna()
     model = Prophet(interval_width=confidence_interval)
+    prophet_df = prophet_df.dropna()  # Ensure no NAs before modeling
     model.fit(prophet_df)
     future = model.make_future_dataframe(periods=forecast_months, freq='ME')
     forecast = model.predict(future)
