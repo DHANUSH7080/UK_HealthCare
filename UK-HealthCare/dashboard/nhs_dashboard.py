@@ -254,6 +254,12 @@ elif page == "Chat with NHS AI":
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
+    if not df.empty and pd.to_datetime(df['Month'], errors='coerce').notna().any():
+      latest_month = pd.to_datetime(df['Month'], errors='coerce').max()
+      latest_month_str = latest_month.strftime('%B %Y')
+    else:
+      latest_month_str = "No valid dates"
+
     # ✅ Summarize dataset context (use key stats only)
     latest_month = pd.to_datetime(df['Month'].max()).strftime('%B %Y')
     summary_text = f"""
