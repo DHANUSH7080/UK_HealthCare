@@ -7,6 +7,8 @@ from prophet import Prophet
 from streamlit_option_menu import option_menu
 from datetime import datetime
 import os
+import warnings
+warnings.filterwarnings("ignore", message=".*fill_method.*")
 import requests
 from dotenv import load_dotenv
 load_dotenv()
