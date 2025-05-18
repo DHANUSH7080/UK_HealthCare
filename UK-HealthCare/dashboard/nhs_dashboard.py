@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from pandas import to_datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from sklearn.ensemble import IsolationForest
@@ -70,11 +69,11 @@ h1, h2, h3, h4, h5 {
 def load_data():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, "..", "data", "NHS_Trusts_Merged_2024_2025.csv")
-    return pd.read_csv(file_path)
+    return pd.read_csv(file_path, parse_dates=["Month"])  # <- convert on load
 
 df = load_data()
-df['Month'] = pd.to_datetime(df['Month'], errors='coerce')
-df=df.asfreq('ME')
+
+
 # Navigation
 with st.sidebar:
     page = option_menu(
@@ -117,11 +116,8 @@ if page == "Home - Trends":
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        if not filtered_df.empty and 'Average (median) waiting time (in' in filtered_df.columns:
-           current_wait = filtered_df['Average (median) waiting time (in weeks)'].iloc[0]
-           create_metric_card(f"Current Median Wait {trust_suffix}", f"{current_wait:.1f} weeks")
-        else:
-           create_metric_card(f"Current Median Wait {trust_suffix}", "No data")
+        current_wait = filtered_df['Average (median) waiting time (in weeks)'].iloc[-1]
+        create_metric_card(f"Current Median Wait {trust_suffix}", f"{current_wait:.1f} weeks")
     with col2:
         incomplete_pathways = filtered_df['Total number of incomplete pathways'].sum()
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
@@ -169,14 +165,17 @@ elif page == "Anomaly Detection":
     anomalies = df[df["Anomaly"] == -1]
 
     if not anomalies.empty:
-       for _, row in df.iterrows():
-           month = to_datetime(row['Month'])  # safely convert
-           st.markdown(f"""
-           <div style="background-color: red; padding: 1rem; border-radius: 12px; margin: 0.5rem 0;">
-              <h4 style="color: white;">⚠️ Anomaly Detected: {month.strftime('%B %Y')}</h4>
-              <p style="color: white;">Waiting Time: {row['Average (median) waiting time (in weeks)']:.1f} weeks | Region: {row['Region Code']}</p>
-           </div>
-           """, unsafe_allow_html=True)
+        for _, row in anomalies.iterrows():
+            with st.container():
+                st.markdown(f"""
+                <div style="background: linear-gradient(45deg, #ef4444, #dc2626);
+                            padding: 1rem;
+                            border-radius: 12px;
+                            margin: 0.5rem 0;">
+                    <h4 style="color: white;">⚠️ Anomaly Detected: {row['Provider Name']} - {row['Month'].strftime('%b %Y')}</h4>
+                    <p style="color: white;">Waiting Time: {row['Average (median) waiting time (in weeks)']:.1f} weeks | Region: {row['Region Code']}</p>
+                </div>
+                """, unsafe_allow_html=True)
     else:
         st.success("🎉 No anomalies detected with current settings")
 
@@ -254,14 +253,8 @@ elif page == "Chat with NHS AI":
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
-    month_col = pd.to_datetime(df['Month'], format='%Y-%m', errors='coerce')
-
-if month_col.notna().any():
-    latest_month = month_col.max()
-    latest_month_str = latest_month.strftime('%B %Y')
-else:
-    latest_month_str = "No valid dates"
-
+    # ✅ Summarize dataset context (use key stats only)
+    latest_month = df['Month'].max().strftime('%B %Y')
     summary_text = f"""
 You are an NHS data assistant. You must answer based on the current dataset of monthly waiting times (April 2024 to March 2025).
 
