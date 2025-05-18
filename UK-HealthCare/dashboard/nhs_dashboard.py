@@ -254,7 +254,7 @@ elif page == "Chat with NHS AI":
     GROQ_API_KEY = os.getenv("GROQ_API_KEY")
     endpoint = "https://api.groq.com/openai/v1/chat/completions"
 
-   month_col = pd.to_datetime(df['Month'], errors='coerce')  # convert all at once
+    month_col = pd.to_datetime(df['Month'], format='%Y-%m', errors='coerce')
 
 if month_col.notna().any():
     latest_month = month_col.max()
