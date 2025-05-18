@@ -164,17 +164,14 @@ elif page == "Anomaly Detection":
     anomalies = df[df["Anomaly"] == -1]
 
     if not anomalies.empty:
-        for _, row in anomalies.iterrows():
-            with st.container():
-                st.markdown(f"""
-                <div style="background: linear-gradient(45deg, #ef4444, #dc2626);
-                            padding: 1rem;
-                            border-radius: 12px;
-                            margin: 0.5rem 0;">
-                    <h4 style="color: white;">⚠️ Anomaly Detected: {row['Provider Name']} - {row['Month'].strftime('%b %Y')}</h4>
-                    <p style="color: white;">Waiting Time: {row['Average (median) waiting time (in weeks)']:.1f} weeks | Region: {row['Region Code']}</p>
-                </div>
-                """, unsafe_allow_html=True)
+        for _, row in df.iterrows():
+            month = to_datetime(row['Month'])  # safely convert
+            st.markdown(f"""
+            <div style="background-color: red; padding: 1rem; border-radius: 12px; margin: 0.5rem 0;">
+              <h4 style="color: white;">⚠️ Anomaly Detected: {month.strftime('%B %Y')}</h4>
+              <p style="color: white;">Waiting Time: {row['Average Wait']} mins</p>
+            </div>
+            """, unsafe_allow_html=True)
     else:
         st.success("🎉 No anomalies detected with current settings")
 
