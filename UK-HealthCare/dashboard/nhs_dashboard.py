@@ -73,6 +73,7 @@ def load_data():
     return pd.read_csv(file_path)
 
 df = load_data()
+df['Month'] = pd.to_datetime(df['Month'], errors='coerce')
 
 # Navigation
 with st.sidebar:
@@ -257,7 +258,7 @@ You are an NHS data assistant. You must answer based on the current dataset of m
 
 **Dataset Summary**:
 - Number of records: {len(df)}
-- Time range: {df['Month'] = pd.to_datetime(df['Month']).min().strftime('%B %Y')} to {df['Month'].max().strftime('%B %Y')}
+- Time range: {df['Month'].min().strftime('%B %Y')} to {df['Month'].max().strftime('%B %Y')}
 - Number of Trusts: {df['Provider Name'].nunique()}
 - Average waiting time (latest month: {latest_month}): {df[df['Month'] == df['Month'].max()]['Average (median) waiting time (in weeks)'].mean():.2f} weeks
 - Highest incomplete pathways: {df['Total number of incomplete pathways'].max():,}
