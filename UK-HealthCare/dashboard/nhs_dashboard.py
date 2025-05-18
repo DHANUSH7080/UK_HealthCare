@@ -123,7 +123,7 @@ if page == "Home - Trends":
     with col2:
         incomplete_pathways = filtered_df['Total number of incomplete pathways'].sum()
         create_metric_card(f"Total Incomplete Pathways {trust_suffix}", f"{incomplete_pathways:,}")
-   with col3:  
+    with col3:  
         col3_data = filtered_df['Average (median) waiting time (in weeks)'].ffill()
     # Add .dropna() and handle empty series
         if len(col3_data) > 1:
