@@ -203,7 +203,7 @@ elif page == "Forecasting":
     prophet_df = forecast_df.rename(columns={'Month': 'ds', 'Average (median) waiting time (in weeks)': 'y'})[['ds', 'y']].dropna()
     model = Prophet(interval_width=confidence_interval)
     model.fit(prophet_df)
-    future = model.make_future_dataframe(periods=forecast_months, freq='M')
+    future = model.make_future_dataframe(periods=forecast_months, freq='ME')
     forecast = model.predict(future)
 
     fig = go.Figure()
