@@ -7,9 +7,21 @@ from prophet import Prophet
 from streamlit_option_menu import option_menu
 from datetime import datetime
 import os
+import json
 import requests
 from dotenv import load_dotenv
 load_dotenv()
+
+# NHS statistical region code -> display name (verified against provider locations)
+REGION_NAMES = {
+    'Y56': 'London',
+    'Y58': 'South West',
+    'Y59': 'South East',
+    'Y60': 'Midlands',
+    'Y61': 'East of England',
+    'Y62': 'North West',
+    'Y63': 'North East and Yorkshire',
+}
 
 # Page config
 st.set_page_config(page_title="NHS Dynamic Dashboard", layout="wide")
@@ -66,20 +78,53 @@ h1, h2, h3, h4, h5 {
 
 # Load data
 @st.cache_data
-def load_data():
+def load_data(file_mtime):
+    # file_mtime is unused inside the function but is part of the cache key:
+    # whenever the CSV on disk changes, its mtime changes, so Streamlit
+    # treats this as a new call and re-reads the file instead of serving
+    # a stale cached DataFrame after a redeploy.
     base_dir = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(base_dir, "..", "data", "NHS_Trusts_Merged_2024_2025.csv")
     return pd.read_csv(file_path, parse_dates=["Month"])  # <- convert on load
 
-df = load_data()
+@st.cache_data
+def load_region_compliance(file_mtime):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "..", "data", "Target_Compliance_Region_2025_2026.csv")
+    comp = pd.read_csv(file_path)
+    comp["Month_dt"] = pd.to_datetime(comp["Month"], format="%B-%Y")
+    return comp.sort_values("Month_dt")
+
+@st.cache_data
+def load_provider_compliance(file_mtime):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "..", "data", "Target_Compliance_Provider_2025_2026.csv")
+    comp = pd.read_csv(file_path)
+    comp["Month_dt"] = pd.to_datetime(comp["Month"], format="%B-%Y")
+    return comp.sort_values("Month_dt")
+
+@st.cache_data
+def load_region_geojson(file_mtime):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    file_path = os.path.join(base_dir, "..", "data", "nhs_regions.geojson")
+    with open(file_path) as f:
+        return json.load(f)
+
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_csv_path = os.path.join(_base_dir, "..", "data", "NHS_Trusts_Merged_2024_2025.csv")
+df = load_data(os.path.getmtime(_csv_path))
+
+_region_comp_path = os.path.join(_base_dir, "..", "data", "Target_Compliance_Region_2025_2026.csv")
+_provider_comp_path = os.path.join(_base_dir, "..", "data", "Target_Compliance_Provider_2025_2026.csv")
+_geojson_path = os.path.join(_base_dir, "..", "data", "nhs_regions.geojson")
 
 
 # Navigation
 with st.sidebar:
     page = option_menu(
         "NHS Dashboard",
-        ["Home - Trends", "Anomaly Detection", "Forecasting", "Raw Data", "Chat with NHS AI"],
-        icons=['bar-chart-line', 'exclamation-triangle', 'graph-up', 'table', 'chat-dots'],
+        ["Home - Trends", "Target Compliance", "Regional Map", "Anomaly Detection", "Forecasting", "Raw Data", "Chat with NHS AI"],
+        icons=['bar-chart-line', 'flag', 'map', 'exclamation-triangle', 'graph-up', 'table', 'chat-dots'],
         menu_icon="hospital",
         default_index=0,
         styles={
@@ -149,6 +194,154 @@ if page == "Home - Trends":
                           line_group="Provider Name", hover_name="Provider Name",
                           color_discrete_sequence=px.colors.sequential.Magma)
             st.plotly_chart(fig, use_container_width=True)
+
+# Target Compliance
+elif page == "Target Compliance":
+    st.title("🎯 18-Week / 52-Week Target Compliance")
+    st.caption(
+        "Tracks performance against NHS England's elective recovery targets: 65% of patients "
+        "seen within 18 weeks (interim goal reached nationally in March 2026), rising to the "
+        "92% constitutional standard by 2029, while holding 52+ week waits under 1%. "
+        "Coverage: April 2025 – April 2026 (the dataset's earlier months predate this breakdown)."
+    )
+
+    region_comp = load_region_compliance(os.path.getmtime(_region_comp_path))
+    provider_comp = load_provider_compliance(os.path.getmtime(_provider_comp_path))
+
+    national = region_comp.groupby("Month_dt", as_index=False)[
+        ["Total number of incomplete pathways", "Total within 18 weeks", "Total 52 plus weeks"]
+    ].sum()
+    national["% within 18 weeks"] = national["Total within 18 weeks"] / national["Total number of incomplete pathways"] * 100
+    national["% 52 plus weeks"] = national["Total 52 plus weeks"] / national["Total number of incomplete pathways"] * 100
+    national = national.sort_values("Month_dt")
+    latest = national.iloc[-1]
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        create_metric_card(
+            "% Within 18 Weeks (National, latest)",
+            f"{latest['% within 18 weeks']:.1f}%",
+            f"{latest['% within 18 weeks'] - 65:+.1f} pts vs 65% interim target"
+        )
+    with col2:
+        create_metric_card(
+            "% Waiting 52+ Weeks (National, latest)",
+            f"{latest['% 52 plus weeks']:.2f}%",
+            "target: under 1%"
+        )
+    with col3:
+        create_metric_card(
+            "Gap to 92% Constitutional Standard",
+            f"{92 - latest['% within 18 weeks']:.1f} pts",
+            "goal: by 2029"
+        )
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=national["Month_dt"], y=national["% within 18 weeks"],
+                              name="% within 18 weeks", mode="lines+markers", line=dict(color="#3b82f6")))
+    fig.add_hline(y=65, line_dash="dash", line_color="#f59e0b",
+                  annotation_text="65% interim target (Mar 2026)", annotation_position="bottom right")
+    fig.add_hline(y=92, line_dash="dot", line_color="#10b981",
+                  annotation_text="92% constitutional standard (2029)", annotation_position="top right")
+    fig.update_layout(template="plotly_dark", height=450, title="National % Within 18 Weeks",
+                       xaxis_title="Month", yaxis_title="% within 18 weeks",
+                       plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig, use_container_width=True)
+
+    fig2 = go.Figure()
+    fig2.add_trace(go.Scatter(x=national["Month_dt"], y=national["% 52 plus weeks"],
+                               name="% 52+ weeks", mode="lines+markers", line=dict(color="#ef4444")))
+    fig2.add_hline(y=1, line_dash="dash", line_color="#10b981", annotation_text="<1% target")
+    fig2.update_layout(template="plotly_dark", height=350, title="National % Waiting 52+ Weeks",
+                        xaxis_title="Month", yaxis_title="% waiting 52+ weeks",
+                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig2, use_container_width=True)
+
+    st.subheader("📍 Latest Month — Regional Breakdown")
+    latest_month_dt = region_comp["Month_dt"].max()
+    latest_region = region_comp[region_comp["Month_dt"] == latest_month_dt].copy()
+    latest_region["Region Name"] = latest_region["Region Code"].map(REGION_NAMES)
+    latest_region = latest_region.sort_values("% within 18 weeks", ascending=False)
+
+    fig3 = px.bar(latest_region, x="Region Name", y="% within 18 weeks", template="plotly_dark",
+                  color="% within 18 weeks", color_continuous_scale="RdYlGn", range_color=[40, 80])
+    fig3.add_hline(y=65, line_dash="dash", line_color="white", annotation_text="65% target")
+    fig3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig3, use_container_width=True)
+
+    st.dataframe(
+        latest_region[["Region Name", "Total number of incomplete pathways", "% within 18 weeks", "% 52 plus weeks"]]
+        .style.format({
+            "Total number of incomplete pathways": "{:,}",
+            "% within 18 weeks": "{:.1f}%",
+            "% 52 plus weeks": "{:.2f}%"
+        }),
+        use_container_width=True
+    )
+
+    with st.expander("🏥 Trust-level performance (latest month)"):
+        latest_provider = provider_comp[provider_comp["Month_dt"] == provider_comp["Month_dt"].max()].copy()
+        latest_provider["Region Name"] = latest_provider["Region Code"].map(REGION_NAMES)
+        latest_provider = latest_provider.sort_values("% within 18 weeks")
+        st.dataframe(
+            latest_provider[["Provider Name", "Region Name", "Total number of incomplete pathways",
+                              "% within 18 weeks", "% 52 plus weeks"]]
+            .style.format({
+                "Total number of incomplete pathways": "{:,}",
+                "% within 18 weeks": "{:.1f}%",
+                "% 52 plus weeks": "{:.2f}%"
+            }),
+            height=400,
+            use_container_width=True
+        )
+
+# Regional Map
+elif page == "Regional Map":
+    st.title("🗺️ Regional Map — NHS England")
+
+    metric_choice = st.radio(
+        "Metric to map:",
+        ["Average median wait (weeks)", "% within 18 weeks", "% 52+ weeks"],
+        horizontal=True
+    )
+
+    geojson = load_region_geojson(os.path.getmtime(_geojson_path))
+
+    if metric_choice == "Average median wait (weeks)":
+        map_source = df.groupby(["Region Code", "Month"], as_index=False)["Average (median) waiting time (in weeks)"].mean()
+        months_avail = sorted(map_source["Month"].unique())
+        sel_month = st.select_slider("Month", options=months_avail, value=months_avail[-1],
+                                      format_func=lambda d: d.strftime("%b %Y"))
+        plot_df = map_source[map_source["Month"] == sel_month].copy()
+        color_col = "Average (median) waiting time (in weeks)"
+        color_scale = "Blues"
+    else:
+        region_comp = load_region_compliance(os.path.getmtime(_region_comp_path))
+        col_map = {"% within 18 weeks": "% within 18 weeks", "% 52+ weeks": "% 52 plus weeks"}
+        color_col = col_map[metric_choice]
+        months_avail = sorted(region_comp["Month_dt"].unique())
+        sel_month = st.select_slider("Month", options=months_avail, value=months_avail[-1],
+                                      format_func=lambda d: d.strftime("%b %Y"))
+        plot_df = region_comp[region_comp["Month_dt"] == sel_month].copy()
+        color_scale = "RdYlGn" if metric_choice == "% within 18 weeks" else "RdYlGn_r"
+
+    plot_df["Region Name"] = plot_df["Region Code"].map(REGION_NAMES)
+
+    fig = px.choropleth(
+        plot_df, geojson=geojson, locations="Region Code", featureidkey="properties.Region_Code",
+        color=color_col, color_continuous_scale=color_scale, hover_name="Region Name",
+        projection="mercator"
+    )
+    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_layout(template="plotly_dark", height=650, margin={"r": 0, "t": 30, "l": 0, "b": 0},
+                       paper_bgcolor='rgba(0,0,0,0)')
+    st.plotly_chart(fig, use_container_width=True)
+
+    st.dataframe(
+        plot_df[["Region Name", color_col]].sort_values(color_col, ascending=False)
+        .style.format({color_col: "{:.1f}"}),
+        use_container_width=True
+    )
 
 # Anomaly Detection
 elif page == "Anomaly Detection":
