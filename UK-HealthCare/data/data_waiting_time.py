@@ -8,7 +8,11 @@ folder_path = "data"
 months = [
     "April-2024.xlsx", "May-2024.xlsx", "June-2024.xlsx", "July-2024.xlsx",
     "August-2024.xlsx", "September-2024.xlsx", "October-2024.xlsx", "November-2024.xlsx",
-    "December-2024.xlsx", "January-2025.xlsx", "February-2025.xlsx", "March-2025.xlsx"
+    "December-2024.xlsx", "January-2025.xlsx", "February-2025.xlsx", "March-2025.xlsx",
+    "April-2025.xlsx", "May-2025.xlsx", "June-2025.xlsx", "July-2025.xlsx",
+    "August-2025.xlsx", "September-2025.xlsx", "October-2025.xlsx", "November-2025.xlsx",
+    "December-2025.xlsx", "January-2026.xlsx", "February-2026.xlsx", "March-2026.xlsx",
+    "April-2026.xlsx"
 ]
 
 all_data = []
