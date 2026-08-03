@@ -26,53 +26,158 @@ REGION_NAMES = {
 # Page config
 st.set_page_config(page_title="NHS Dynamic Dashboard", layout="wide")
 
-# Custom CSS
+# Custom CSS — "liquid glass" theme: dark base, blurred colour orbs for depth,
+# frosted translucent panels throughout (sidebar, cards, charts, tables, inputs).
 st.markdown("""
 <style>
 :root {
-    --primary: #3b82f6;
-    --secondary: #9333ea;
+    --accent: #2dd4bf;
+    --accent-2: #8b5cf6;
+    --accent-3: #f472b6;
+    --glass-bg: rgba(255,255,255,0.055);
+    --glass-border: rgba(255,255,255,0.12);
+    --text-primary: #f5f5f7;
+    --text-secondary: #9a9aa5;
 }
 
-body {
-    background: linear-gradient(to right bottom, #0f172a, #1e293b);
-    color: #e2e8f0;
-    font-family: 'Inter', sans-serif;
+html, body, .stApp {
+    background: #0a0b0f !important;
+    color: var(--text-primary);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-.sidebar .sidebar-content {
-    background: linear-gradient(to bottom right, #1e293b, #0f172a);
-    border-right: 1px solid #334155;
+/* Soft blurred colour orbs behind everything for the glass depth effect */
+.stApp::before, .stApp::after {
+    content: "";
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(110px);
+    z-index: 0;
+    opacity: 0.35;
+    pointer-events: none;
+}
+.stApp::before {
+    width: 560px; height: 560px;
+    background: radial-gradient(circle, var(--accent), transparent 70%);
+    top: -180px; left: -140px;
+}
+.stApp::after {
+    width: 520px; height: 520px;
+    background: radial-gradient(circle, var(--accent-2), transparent 70%);
+    bottom: -160px; right: -120px;
+}
+
+[data-testid="stSidebar"] {
+    background: transparent !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    border-right: 1px solid var(--glass-border);
 }
 
 h1, h2, h3, h4, h5 {
-    background: linear-gradient(45deg, var(--primary), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-weight: 700 !important;
+    color: var(--text-primary) !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px;
+}
+p, span, label, .stMarkdown, .stCaption {
+    color: var(--text-secondary);
 }
 
-.stSelectbox>div>div>div {
-    color: #000 !important;
+/* Glass styling for Streamlit's native inputs */
+div[data-baseweb="select"] > div,
+.stTextArea textarea,
+.stTextInput input {
+    background: var(--glass-bg) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 14px !important;
+    color: var(--text-primary) !important;
+}
+.stButton > button {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    color: var(--text-primary);
+    backdrop-filter: blur(10px);
+}
+.stButton > button:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.stSlider [data-baseweb="slider"] div[role="slider"] {
+    background-color: var(--accent) !important;
+}
+[data-testid="stDataFrame"], [data-testid="stTable"] {
+    border-radius: 16px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+}
+[data-testid="stNotification"] {
+    border-radius: 14px !important;
+    backdrop-filter: blur(14px);
+}
+[data-testid="stMetricValue"] {
+    color: var(--text-primary);
 }
 
+/* Glass metric card, used via create_metric_card() */
 .metric-card {
-    background: linear-gradient(135deg, #1e293b, #0f172a);
-    border-radius: 15px;
-    padding: 1.5rem;
-    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.15);
-    transition: transform 0.3s ease;
+    background: var(--glass-bg);
+    backdrop-filter: blur(22px) saturate(180%);
+    -webkit-backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    padding: 1.4rem 1.5rem;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.08);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+    position: relative;
+    overflow: hidden;
 }
 .metric-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
+    border-color: rgba(45, 212, 191, 0.4);
+}
+.metric-label {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.4rem;
+}
+.metric-value {
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+.metric-delta {
+    display: inline-block;
+    margin-top: 0.6rem;
+    font-size: 0.78rem;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(45, 212, 191, 0.14);
+    color: #5eead4;
 }
 
 .plot-container {
-    background: linear-gradient(145deg, #1e293b, #0f172a);
-    border-radius: 15px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(22px) saturate(180%);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
     padding: 1rem;
-    box-shadow: 0 4px 25px rgba(59, 130, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
 }
+
+.glass-alert {
+    background: rgba(244, 114, 182, 0.1);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(244, 114, 182, 0.3);
+    border-radius: 16px;
+    padding: 1rem 1.2rem;
+    margin: 0.5rem 0;
+}
+.glass-alert h4 { color: #f9a8d4 !important; margin: 0 0 0.3rem; font-size: 1rem; }
+.glass-alert p { color: var(--text-primary); margin: 0; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -128,10 +233,18 @@ with st.sidebar:
         menu_icon="hospital",
         default_index=0,
         styles={
-            "container": {"padding": "5!important", "background-color": "transparent"},
-            "icon": {"color": "white", "font-size": "25px"},
-            "nav-link": {"font-size": "16px", "text-align": "left", "margin": "0px", "color": "#e2e8f0"},
-            "nav-link-selected": {"background": "linear-gradient(45deg, #3b82f6, #9333ea)", "border-radius": "8px"},
+            "container": {"padding": "8px", "background-color": "transparent"},
+            "icon": {"color": "#9a9aa5", "font-size": "18px"},
+            "nav-link": {
+                "font-size": "14px", "text-align": "left", "margin": "3px 0",
+                "border-radius": "14px", "color": "#c9c9d3", "padding": "10px 14px",
+            },
+            "nav-link-selected": {
+                "background-color": "rgba(45, 212, 191, 0.14)",
+                "border": "1px solid rgba(45, 212, 191, 0.35)",
+                "color": "#f5f5f7",
+                "border-radius": "14px",
+            },
         },
     )
 
@@ -139,9 +252,9 @@ with st.sidebar:
 def create_metric_card(label, value, delta=None):
     card = f"""
     <div class="metric-card">
-        <div style="font-size: 0.9rem; color: #94a3b8;">{label}</div>
-        <div style="font-size: 2rem; font-weight: 700; color: #3b82f6;">{value}</div>
-        {f'<div style="color: #10b981; font-size: 0.8rem;">▲ {delta}</div>' if delta else ''}
+        <div class="metric-label">{label}</div>
+        <div class="metric-value">{value}</div>
+        {f'<div class="metric-delta">{delta}</div>' if delta else ''}
     </div>
     """
     return st.markdown(card, unsafe_allow_html=True)
@@ -172,15 +285,16 @@ if page == "Home - Trends":
 
     st.subheader(f"📆 Monthly Waiting Time Trends {trust_suffix}")
     trust_avg = filtered_df.groupby("Month")["Average (median) waiting time (in weeks)"].mean().reset_index()
-    fig = px.line(trust_avg, x="Month", y="Average (median) waiting time (in weeks)", 
+    fig = px.line(trust_avg, x="Month", y="Average (median) waiting time (in weeks)",
                   template="plotly_dark", line_shape="spline",
-                  markers=True, color_discrete_sequence=['#3b82f6'])
+                  markers=True, color_discrete_sequence=['#2dd4bf'])
     fig.update_layout(
         hovermode="x unified",
         plot_bgcolor='rgba(0,0,0,0)',
         paper_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#e5e5ea'),
         xaxis=dict(showgrid=False),
-        yaxis=dict(showgrid=True, gridcolor='#334155'),
+        yaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.08)'),
         height=500
     )
     st.plotly_chart(fig, use_container_width=True)
@@ -189,10 +303,11 @@ if page == "Home - Trends":
         providers = st.multiselect("Select providers to compare:", df['Provider Name'].unique())
         if providers:
             provider_df = df[df['Provider Name'].isin(providers)]
-            fig = px.area(provider_df, x="Month", y="Total number of incomplete pathways", 
+            fig = px.area(provider_df, x="Month", y="Total number of incomplete pathways",
                           color="Provider Name", template="plotly_dark",
                           line_group="Provider Name", hover_name="Provider Name",
-                          color_discrete_sequence=px.colors.sequential.Magma)
+                          color_discrete_sequence=['#2dd4bf', '#8b5cf6', '#f472b6', '#fbbf24', '#60a5fa', '#34d399'])
+            fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
             st.plotly_chart(fig, use_container_width=True)
 
 # Target Compliance
@@ -238,23 +353,23 @@ elif page == "Target Compliance":
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=national["Month_dt"], y=national["% within 18 weeks"],
-                              name="% within 18 weeks", mode="lines+markers", line=dict(color="#3b82f6")))
-    fig.add_hline(y=65, line_dash="dash", line_color="#f59e0b",
+                              name="% within 18 weeks", mode="lines+markers", line=dict(color="#2dd4bf")))
+    fig.add_hline(y=65, line_dash="dash", line_color="#fbbf24",
                   annotation_text="65% interim target (Mar 2026)", annotation_position="bottom right")
-    fig.add_hline(y=92, line_dash="dot", line_color="#10b981",
+    fig.add_hline(y=92, line_dash="dot", line_color="#34d399",
                   annotation_text="92% constitutional standard (2029)", annotation_position="top right")
     fig.update_layout(template="plotly_dark", height=450, title="National % Within 18 Weeks",
                        xaxis_title="Month", yaxis_title="% within 18 weeks",
-                       plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                       plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
     st.plotly_chart(fig, use_container_width=True)
 
     fig2 = go.Figure()
     fig2.add_trace(go.Scatter(x=national["Month_dt"], y=national["% 52 plus weeks"],
-                               name="% 52+ weeks", mode="lines+markers", line=dict(color="#ef4444")))
-    fig2.add_hline(y=1, line_dash="dash", line_color="#10b981", annotation_text="<1% target")
+                               name="% 52+ weeks", mode="lines+markers", line=dict(color="#f472b6")))
+    fig2.add_hline(y=1, line_dash="dash", line_color="#34d399", annotation_text="<1% target")
     fig2.update_layout(template="plotly_dark", height=350, title="National % Waiting 52+ Weeks",
                         xaxis_title="Month", yaxis_title="% waiting 52+ weeks",
-                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
     st.plotly_chart(fig2, use_container_width=True)
 
     st.subheader("📍 Latest Month — Regional Breakdown")
@@ -264,9 +379,9 @@ elif page == "Target Compliance":
     latest_region = latest_region.sort_values("% within 18 weeks", ascending=False)
 
     fig3 = px.bar(latest_region, x="Region Name", y="% within 18 weeks", template="plotly_dark",
-                  color="% within 18 weeks", color_continuous_scale="RdYlGn", range_color=[40, 80])
+                  color="% within 18 weeks", color_continuous_scale="Tealgrn", range_color=[40, 80])
     fig3.add_hline(y=65, line_dash="dash", line_color="white", annotation_text="65% target")
-    fig3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+    fig3.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
     st.plotly_chart(fig3, use_container_width=True)
 
     st.dataframe(
@@ -314,7 +429,7 @@ elif page == "Regional Map":
                                       format_func=lambda d: d.strftime("%b %Y"))
         plot_df = map_source[map_source["Month"] == sel_month].copy()
         color_col = "Average (median) waiting time (in weeks)"
-        color_scale = "Blues"
+        color_scale = "Tealgrn"
     else:
         region_comp = load_region_compliance(os.path.getmtime(_region_comp_path))
         col_map = {"% within 18 weeks": "% within 18 weeks", "% 52+ weeks": "% 52 plus weeks"}
@@ -332,9 +447,9 @@ elif page == "Regional Map":
         color=color_col, color_continuous_scale=color_scale, hover_name="Region Name",
         projection="mercator"
     )
-    fig.update_geos(fitbounds="locations", visible=False)
+    fig.update_geos(fitbounds="locations", visible=False, bgcolor='rgba(0,0,0,0)')
     fig.update_layout(template="plotly_dark", height=650, margin={"r": 0, "t": 30, "l": 0, "b": 0},
-                       paper_bgcolor='rgba(0,0,0,0)')
+                       paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
     st.plotly_chart(fig, use_container_width=True)
 
     st.dataframe(
@@ -361,12 +476,9 @@ elif page == "Anomaly Detection":
         for _, row in anomalies.iterrows():
             with st.container():
                 st.markdown(f"""
-                <div style="background: linear-gradient(45deg, #ef4444, #dc2626);
-                            padding: 1rem;
-                            border-radius: 12px;
-                            margin: 0.5rem 0;">
-                    <h4 style="color: white;">⚠️ Anomaly Detected: {row['Provider Name']} - {row['Month'].strftime('%b %Y')}</h4>
-                    <p style="color: white;">Waiting Time: {row['Average (median) waiting time (in weeks)']:.1f} weeks | Region: {row['Region Code']}</p>
+                <div class="glass-alert">
+                    <h4>⚠️ Anomaly Detected: {row['Provider Name']} - {row['Month'].strftime('%b %Y')}</h4>
+                    <p>Waiting Time: {row['Average (median) waiting time (in weeks)']:.1f} weeks | Region: {row['Region Code']}</p>
                 </div>
                 """, unsafe_allow_html=True)
     else:
@@ -400,10 +512,12 @@ elif page == "Forecasting":
     forecast = model.predict(future)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name='Prediction', line=dict(color='#3b82f6')))
-    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_upper'], name='Upper Bound', line=dict(color='#9333ea', dash='dot')))
-    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_lower'], name='Lower Bound', line=dict(color='#9333ea', dash='dot')))
-    fig.update_layout(template="plotly_dark", title=f"{forecast_months}-Month Forecast for {selected_trust}", xaxis_title="Date", yaxis_title="Waiting Time (weeks)", hovermode="x unified", height=600)
+    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat'], name='Prediction', line=dict(color='#2dd4bf')))
+    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_upper'], name='Upper Bound', line=dict(color='#8b5cf6', dash='dot')))
+    fig.add_trace(go.Scatter(x=forecast['ds'], y=forecast['yhat_lower'], name='Lower Bound', line=dict(color='#8b5cf6', dash='dot')))
+    fig.update_layout(template="plotly_dark", title=f"{forecast_months}-Month Forecast for {selected_trust}",
+                       xaxis_title="Date", yaxis_title="Waiting Time (weeks)", hovermode="x unified", height=600,
+                       plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font=dict(color='#e5e5ea'))
     st.plotly_chart(fig, use_container_width=True)
 
     st.subheader("Forecast Details")
@@ -433,7 +547,7 @@ elif page == "Raw Data":
         filtered_df.style.format({
             'Average (median) waiting time (in weeks)': '{:.1f}',
             'Total number of incomplete pathways': '{:,}'
-        }).background_gradient(cmap='magma'),
+        }).background_gradient(cmap='BuGn'),
         height=600,
         use_container_width=True
     )
